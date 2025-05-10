@@ -1,9 +1,13 @@
 import tkinter as tk
+from tkinter import messagebox
+from tkinter import simpledialog
+from dog.dog_interface import DogPlayerInterface
+from dog.dog_actor import DogActor
 
 CARD_WIDTH = 60
 CARD_HEIGHT = 84
 
-class SaboteurGame(tk.Tk):
+class SaboteurGame(DogPlayerInterface,tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Saboteur - Interface Tkinter")
@@ -92,6 +96,11 @@ class SaboteurGame(tk.Tk):
         self.discard_slot.pack(pady=5)
         self.discard_slot.pack_propagate(False)
         self.discard_slot.bind("<Button-1>", self.on_discard_click)
+
+        player_name = simpledialog.askstring(title="Player identification", prompt="Qual o seu nome?")
+        self.dog_server_interface = DogActor()
+        message = self.dog_server_interface.initialize(player_name, self)
+        messagebox.showinfo(message=message)
     
     # Função chamada ao clicar em um slot do tabuleiro
     def on_board_click(self, row, col):
