@@ -12,10 +12,24 @@ class SaboteurGame(DogPlayerInterface,tk.Tk):
         super().__init__()
         self.title("Saboteur - Interface Tkinter")
         
+        # Adicionando a barra de menu
+        menubar = tk.Menu(self)
+        
+        # Menu Game
+        game_menu = tk.Menu(menubar, tearoff=0)
+        game_menu.add_command(label="Start Match", command=self.start_match)
+        game_menu.add_separator()
+        game_menu.add_command(label="Exit", command=self.quit)
+        menubar.add_cascade(label="Game", menu=game_menu)
+        
+        # Configurar a barra de menu na janela principal
+        self.config(menu=menubar)
+        
         # Status: indica se o jogador local é sabotador ou não
         self.status_label = tk.Label(self, text="Você é um Sabotador!", font=("Arial", 14))
         self.status_label.pack(pady=5)
         
+        # Restante do seu código original...
         # Frame principal que conterá o tabuleiro e a lista de jogadores
         main_frame = tk.Frame(self)
         main_frame.pack(padx=10, pady=10)
@@ -101,6 +115,12 @@ class SaboteurGame(DogPlayerInterface,tk.Tk):
         self.dog_server_interface = DogActor()
         message = self.dog_server_interface.initialize(player_name, self)
         messagebox.showinfo(message=message)
+    
+    def start_match(self):
+        """Função chamada quando o usuário seleciona Start Match no menu"""
+        start_status = self.dog_server_interface.start_match(5)
+        message = start_status.get_message()
+        messagebox.showinfo(message = message)
     
     # Função chamada ao clicar em um slot do tabuleiro
     def on_board_click(self, row, col):
