@@ -5,25 +5,40 @@ from tkinter import simpledialog
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
 
+from match import Match
+
+# Constantes para o tamanho das cartas
+CARD_WIDTH = 60
+CARD_HEIGHT = 95
+
 class PlayerInterface(DogPlayerInterface):
     def __init__(self):
-        self.receive_start = self.receive_start
-        self.receive_move = self.receive_move
+        self.receive_start = None
+        self.receive_move = None
         
         self._main_window = tk.Tk()
         self._main_window.title("Saboteur")
-        self._main_window.geometry("800x600")
+        self._main_window.geometry("800x800")
         
         self.fill_window()
-        
+
         self._dog_server_interface = DogActor()
+        
+        # Inicialização do jogador
+        player_name = simpledialog.askstring("Player", "Qual o seu nome?")
+        message = self._dog_server_interface.initialize(player_name, self)
+        messagebox.showinfo(message=message)
+
+        self._match = Match()
+
+        self._popup: tk.Toplevel = None
 
     def fill_window(self):
         for widget in self._main_window.winfo_children():
             widget.destroy()
         
         self._menu = tk.Menu(self._main_window)
-        game_bar = tk.Menu(self._menu,tearoff=0)
+        game_bar = tk.Menu(self._menu, tearoff=0)
         game_bar.add_command(
             label="Start match", 
             command=self.start_match,
@@ -37,11 +52,11 @@ class PlayerInterface(DogPlayerInterface):
         self._main_window.config(menu=self._menu)
 
         # Status
-        self.status_label = tk.Label(self, text="Você é um Sabotador!", font=("Arial", 12))
+        self.status_label = tk.Label(self._main_window, text="Você é um Sabotador!", font=("Arial", 12))
         self.status_label.pack(pady=2)
         
         # Frame principal
-        main_frame = tk.Frame(self)
+        main_frame = tk.Frame(self._main_window)
         main_frame.pack(padx=5, pady=5)
         
         # Tabuleiro
@@ -88,7 +103,7 @@ class PlayerInterface(DogPlayerInterface):
             })
         
         # Área Inferior
-        bottom_frame = tk.Frame(self)
+        bottom_frame = tk.Frame(self._main_window)
         bottom_frame.pack(pady=5)
         
         # Mão do jogador
@@ -116,8 +131,35 @@ class PlayerInterface(DogPlayerInterface):
         self.discard_slot.pack_propagate(False)
         self.discard_slot.bind("<Button-1>", self.on_discard_click)
 
-        # Inicialização
-        player_name = simpledialog.askstring("Player", "Qual o seu nome?")
-        self.dog_server_interface = DogActor()
-        message = self.dog_server_interface.initialize(player_name, self)
-        messagebox.showinfo(message=message)
+    def start_match(self):
+        start_status = self._dog_server_interface.start_match(5)
+        messagebox.showinfo(message=start_status.get_message())
+
+    def quit(self):
+        self._main_window.destroy()
+
+    def on_board_click(self, row, col):
+        print(f"Board clicked at row {row}, column {col}")
+
+    def on_player_click(self, player_idx):
+        print(f"Player {player_idx+1} clicked")
+
+    def on_hand_click(self, card_idx):
+        print(f"Hand card {card_idx} clicked")
+
+    def on_discard_click(self, event):
+        print("Discard pile clicked")
+
+    def receive_start(self, start_status):
+        pass
+
+    def receive_move(self, a_move):
+        pass
+
+    def mainloop(self):
+        self._main_window.mainloop()
+
+# Para executar a interface
+if __name__ == "__main__":
+    interface = PlayerInterface()
+    interface.mainloop()
