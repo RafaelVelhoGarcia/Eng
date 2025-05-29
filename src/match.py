@@ -1,25 +1,10 @@
+import random
+
 from Player import Player
 
 class Match:
     def __init__(self):
-        """ self._jogador_local = Jogador()
-        self._jogador_remoto = Jogador()
-
-        self._mesa = Mesa()
-
-        self._pontos_jogador_local: int = 0
-        self._pontos_jogador_remoto: int = 0
-
-        self._pedido_em_andamento: bool = False
-        self._qual_pedido: str = ""
-        self._infos_popup: dict = dict()
-        self._status_partida: str = "sem partida em andamento"
-
-        self._truco: Truco = Truco()
-        self._envido: Envido = Envido()
-        self._flor: Flor = Flor()
-        self._flor_ou_envido_ja_ocorreu: bool = False
-        self._truco_ja_ocorreu: bool = False"""
+        self._cards: list[Cards] = None
         self._local_player = Player()
         self._remote_player1 = Player()
         self._remote_player2 = Player()
@@ -47,6 +32,83 @@ class Match:
         self._adjacencyMatrix = [0]*15
         for i in range(15):
             self._adjacencyMatrix[i] = [0]*27
+
+    def start_match(self,players: list[str]):
+        print("match constructor")
+        self._match_status = "in progress"
+
+        self._local_player.reset()
+        self._local_player.initialize(players[0][1])
+
+        self._remote_player1.reset()
+        self._remote_player1.initialize(players[1][1])
+
+        self._remote_player2.reset()
+        self._remote_player2.initialize(players[2][1])
+
+        self._remote_player3.reset()
+        self._remote_player3.initialize(players[3][1])
+
+        self._remote_player4.reset()
+        self._remote_player4.initialize(players[4][1])
+
+        move = self.start_new_hand()
+
+        if int(players[0][2]) == 1:
+            self._local_player.switch_turn()
+        elif int(players[1][2]) == 1 :
+            self._remote_player1.switch_turn()
+        elif int(players[2][2]) == 1 :
+            self._remote_player2.switch_turn()
+        elif int(players[3][2]) == 1 :
+            self._remote_player3.switch_turn()
+        else:
+            self._remote_player4.switch_turn()
+        
+        return move
+    
+
+    def start_new_hand(self):
+        self.clean_board()
+        random.shuffle(self._cards)
+        cards = self.distribuir_cartas()
+        local_player_cards = cards[0]
+        remote_player1_cards = cards[1]
+        remote_player2_cards = cards[2]
+        remote_player3_cards = cards[3]
+        remote_player4_cards = cards[4]
+
+        self._local_player.receive_cards(local_player_cards)
+        self._remote_player1.receive_cards(remote_player1_cards)
+        self._remote_player2.receive_cards(remote_player2_cards)
+        self._remote_player3.receive_cards(remote_player3_cards)
+        self._remote_player4.receive_cards(remote_player4_cards)
+
+        move = {
+            "move_type": "new_hand",
+            "local_player_cards": [remote_player1_cards,
+                                   remote_player2_cards,remote_player3_cards,
+                                   remote_player4_cards],
+            "remote_player_cards": local_player_cards,
+            "match_status": "progress",
+        }
+
+        return move
+
+    def distribuir_cartas(self):
+        players_cards = []
+        for i in range(5):
+            temp_cards = []
+            for j in range(6):
+                card = self._cards.pop()
+                temp_cards.append(card)
+            players_cards.append(temp_cards)
+
+        return players_cards
+    
+    def clean_board(self):
+        # melhorar isso aqui
+        self._cartas_jogadas = [[]]
 
     def get_status(self):
         game_status = dict()

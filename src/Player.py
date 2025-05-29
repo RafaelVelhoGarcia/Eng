@@ -1,62 +1,45 @@
-#from carta import Carta
+#from card import Card
 
 class Player:
     def __init__(self):
-        self._cartas: list[tuple] = []
+        self._cards: list[tuple] = []
         """# @AssociationMultiplicity 0..3
         # @AssociationKind Aggregation"""
-        self._venceu_jogo: bool = False
-        self._sua_vez: bool = False
-        self._vitorias_da_mao: list = []
-        self._id_jogador: str = None
+        self._won_game: bool = False
+        self._your_turn: bool = False
+        self._player_id: str = None
 
-    def inicializar(self, id_jog: str = ""):
+    def initialize(self, player_id: str = ""):
         self.reset()
-        self._id_jogador = id_jog
+        self.player_id = player_id
 
     def reset(self):
-        self._cartas = []
-        self._venceu_jogo = False
-        self._sua_vez = False
-        self._vitorias_da_mao = []
+        self._cards = []
+        self._won_game = False
+        self._your_turn = False
 
-    def troca_turno(self):
-        self._sua_vez = not self._sua_vez
+    def switch_turn(self):
+        self._your_turn = not self._your_turn
 
-    def obtem_id_jogador(self) -> str:
-        return self._id_jogador
+    def get_player_id(self) -> str:
+        return self._player_id
 
-    def obtemTurno(self) -> bool:
-        return self._sua_vez
+    def get_turn(self) -> bool:
+        return self._your_turn
 
-    def atribuir_empate(self):
-        self._vitorias_da_mao.append("E")
+    def get_player_wins(self) -> list:
+        return self._hand_wins
 
-    def atribuir_vitoria(self):
-        self._vitorias_da_mao.append("V")
+    def assign_game_win(self):
+        self._won_game = True
 
-    def atribuir_derrota(self):
-        self._vitorias_da_mao.append("D")
+    def get_cards(self) -> list[tuple]:
+        return self._cards
 
-    def obtem_vitorias_jogador(self) -> list:
-        return self._vitorias_da_mao
-
-    def limpar_vitorias_da_mao(self):
-        self._vitorias_da_mao = []
-
-    def atribuir_venceu_jogo(self):
-        self._venceu_jogo = True
-
-    def obtem_cartas(self) -> list[tuple]:
-        return self._cartas
-
-    def receber_cartas(self, cartas: list):
-        self._cartas = list(
-            map(lambda carta: (Carta.de_dict(carta), self._id_jogador), cartas)
+    def receive_cards(self, cards: list):
+        self._cards = list(
+            map(lambda card: (Card.from_dict(card), self._player_id), cards)
         )
-
-    def retirar_carta(self, carta: tuple):
-        self._cartas.remove(carta)
-
-    def atualiza_vitorias_da_mao(self, vitorias_da_mao: list):
-        self._vitorias_da_mao = vitorias_da_mao
+    
+    def remove_card(self, card: tuple):
+        self._cards.remove(card)

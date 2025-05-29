@@ -165,17 +165,23 @@ class PlayerInterface(DogPlayerInterface):
 
         if match_status == "sem partida em andamento":
             start_status = self._dog_server_interface.start_match(5)
+            
             code = start_status.get_code()
             message = start_status.get_message()
+            
             print("consegui o code")
+            
             if code == "0" or code == "1":
                 messagebox.showinfo(message=message)
             elif code == "2":
+                print("AUUUU")
                 players = start_status.get_players()
+                print("BUUUU")
                 move = self._match.start_match(players)
-
+                print("fez o start_martch")
                 self._dog_server_interface.send_move(move)
                 game_status = self._match.get_status()
+                print("fez o send_move")
                 self.update_interface(game_status)
                 messagebox.showinfo(message=message)
 
