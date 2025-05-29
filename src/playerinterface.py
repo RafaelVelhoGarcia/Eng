@@ -34,6 +34,31 @@ class PlayerInterface(DogPlayerInterface):
         self._popup: tk.Toplevel = None
 
     def fill_window(self):
+        self._gold_values = []
+        self._gold_player1 = tk.StringVar()
+        self._gold_player2 = tk.StringVar()
+        self._gold_player3 = tk.StringVar()
+        self._gold_player4 = tk.StringVar()
+        self._gold_player5 = tk.StringVar() 
+        
+        self._gold_local_player = tk.StringVar()
+
+        self._gold_player1.set("0")
+        self._gold_player1.set("1")
+
+        self._gold_values.append(self._gold_player1)
+        self._gold_values.append(self._gold_player2)
+        self._gold_values.append(self._gold_player3)
+        self._gold_values.append(self._gold_player4)
+        self._gold_values.append(self._gold_player5)
+        
+        self._your_team = tk.StringVar()
+        self._ind_turno = tk.StringVar()
+        self._vitorias_mao_remoto = tk.StringVar()
+        self._vitorias_mao_local = tk.StringVar()
+        self._placar_jogador_remoto = tk.StringVar()
+        self._placar_jogador_local = tk.StringVar()
+
         for widget in self._main_window.winfo_children():
             widget.destroy()
         
@@ -52,8 +77,10 @@ class PlayerInterface(DogPlayerInterface):
         self._main_window.config(menu=self._menu)
 
         # Status
-        self.status_label = tk.Label(self._main_window, text="Você é um Sabotador!", font=("Arial", 12))
+        self.status_label = tk.Label(self._main_window, text=self._your_team, font=("Arial", 12))
         self.status_label.pack(pady=2)
+        self.status_turn_label = tk.Label(self._main_window, text=self._ind_turno, font=("Arial", 12))
+        self.status_turn_label.pack(pady=2)
         
         # Frame principal
         main_frame = tk.Frame(self._main_window)
@@ -84,7 +111,7 @@ class PlayerInterface(DogPlayerInterface):
             player_container.pack(pady=1, fill=tk.X)
             player_container.bind("<Button-1>", lambda event, idx=i: self.on_player_click(idx))
             
-            label = tk.Label(player_container, text=f"Player {i+1} - Ouro: 0", font=("Arial", 10))
+            label = tk.Label(player_container, text=f"Player {i+1} - Ouro: {self._gold_values[i]}", font=("Arial", 10))
             label.pack()
             
             cards_frame = tk.Frame(player_container)
@@ -131,9 +158,53 @@ class PlayerInterface(DogPlayerInterface):
         self.discard_slot.pack_propagate(False)
         self.discard_slot.bind("<Button-1>", self.on_discard_click)
 
+
+
     def start_match(self):
-        start_status = self._dog_server_interface.start_match(5)
-        messagebox.showinfo(message=start_status.get_message())
+        match_status = self._match.get_match_status()
+
+        if match_status == "sem partida em andamento":
+            start_status = self._dog_server_interface.start_match(5)
+            code = start_status.get_code()
+            message = start_status.get_message()
+            print("consegui o code")
+            if code == "0" or code == "1":
+                messagebox.showinfo(message=message)
+            elif code == "2":
+                players = start_status.get_players()
+                move = self._match.start_match(players)
+
+                self._dog_server_interface.send_move(move)
+                game_status = self._match.get_status()
+                self.update_interface(game_status)
+                messagebox.showinfo(message=message)
+
+
+
+    def update_interface(self,game_status: dict):
+        your_turn = game_status["your_turn"]
+        if your_turn:
+            self._ind_turno.set("Seu turno")
+        else:
+            self._ind_turno.set("Turno oponente")
+
+        (points_local_player_points,points_remote_player1,
+         points_remote_player2,points_remote_player3,
+         points_remote_player4) = game_status["score"]
+
+        self._gold_player1.set(f"Player 1 - Ouro: {points_remote_player1}")
+        self._gold_player2.set(f"Player 2 - Ouro: {points_remote_player2}")
+        self._gold_player3.set(f"Player 3 - Ouro: {points_remote_player3}")
+        self._gold_player3.set(f"Player 4 - Ouro: {points_remote_player4}")
+        self._gold_local_player(f"{points_local_player_points}")
+
+        local_player_cards = game_status["local_player_cards"]
+        #fazer parte de mudar as cartas :
+
+    def receive_move(self, a_move):
+        self._match.receive_move()
+        game_status = self._match.get_status()
+        self.update_interface()
 
     def quit(self):
         self._main_window.destroy()
@@ -153,7 +224,6 @@ class PlayerInterface(DogPlayerInterface):
     def receive_start(self, start_status):
         pass
 
-    def receive_move(self, a_move):
         pass
 
     def mainloop(self):

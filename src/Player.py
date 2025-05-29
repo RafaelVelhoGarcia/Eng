@@ -1,4 +1,4 @@
-from carta import Carta
+#from carta import Carta
 
 class Player:
     def __init__(self):
