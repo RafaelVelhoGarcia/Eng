@@ -1,6 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
+from tkinter import ttk
+
+from PIL import Image, ImageTk
+
 
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
@@ -134,11 +138,11 @@ class PlayerInterface(DogPlayerInterface):
         bottom_frame.pack(pady=5)
         
         # Mão do jogador
-        hand_frame = tk.Frame(bottom_frame, bd=1, relief=tk.GROOVE)
-        hand_frame.pack(side=tk.LEFT, padx=5)
-        tk.Label(hand_frame, text="Mão", font=("Arial", 10)).pack()
+        self._hand_frame = tk.Frame(bottom_frame, bd=1, relief=tk.GROOVE)
+        self._hand_frame.pack(side=tk.LEFT, padx=5)
+        tk.Label(self._hand_frame, text="Mão", font=("Arial", 10)).pack()
         self.hand_slots = []
-        cards_container = tk.Frame(hand_frame)
+        cards_container = tk.Frame(self._hand_frame)
         cards_container.pack()
         for i in range(6):
             slot = tk.Frame(cards_container, width=CARD_WIDTH, height=CARD_HEIGHT,
@@ -185,6 +189,8 @@ class PlayerInterface(DogPlayerInterface):
                 self.update_interface(game_status)
                 messagebox.showinfo(message=message)
 
+            self._match.start_round()
+
 
 
     def update_interface(self,game_status: dict):
@@ -202,9 +208,28 @@ class PlayerInterface(DogPlayerInterface):
         self._gold_player2.set(f"Player 2 - Ouro: {points_remote_player2}")
         self._gold_player3.set(f"Player 3 - Ouro: {points_remote_player3}")
         self._gold_player3.set(f"Player 4 - Ouro: {points_remote_player4}")
-        self._gold_local_player(f"{points_local_player_points}")
+        self._gold_local_player.set(f"{points_local_player_points}")
 
         local_player_cards = game_status["local_player_cards"]
+        self.__cards_tks = []
+        for col,(card,_) in enumerate(local_player_cards):
+            card_str = card.to_string()
+
+            card_img = Image.open(f"../images/cartas/{card_str}.png")
+            card_img.thumbnail(
+                (card_img.width // 8, card_img.height // 8)
+                Image.LANCZOS,
+            )
+
+            card_tk = ImageTk.PhotoImage(card_img)
+            self.__card_tks.append(card_tk)
+            
+            card_label = ttk.Label(master=self._hand_frame,image = card_tk)
+            card_label.bind(
+                "<Button-1>",
+                lambda _, c=local_player_cards[col]: self.on_hand_click(c),
+            )
+
         #fazer parte de mudar as cartas :
 
     def receive_move(self, a_move):
@@ -217,12 +242,20 @@ class PlayerInterface(DogPlayerInterface):
 
     def on_board_click(self, row, col):
         print(f"Board clicked at row {row}, column {col}")
+        match_status = self._match.get_match_status()
+        if match_status == 3 or match_status == 4:
+            move_to_send = self._match.select_board_position(row, col)
+            game_state = self._match.get_status()
+            self.update_interface(game_state)
+            if bool(move_to_send):
+                self.dog_server_interface.send_move(move_to_send)
 
     def on_player_click(self, player_idx):
         print(f"Player {player_idx+1} clicked")
 
     def on_hand_click(self, card_idx):
         print(f"Hand card {card_idx} clicked")
+        self._match.select_card(card_idx)
 
     def on_discard_click(self, event):
         print("Discard pile clicked")
