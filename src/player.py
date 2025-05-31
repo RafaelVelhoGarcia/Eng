@@ -10,6 +10,10 @@ class Player:
         self._player_id: str = None
         self._selected_card = None
 
+
+    def remove_card_from_hand(self,card):
+        self._cards.remove(card)
+
     def initialize(self, player_id: str = ""):
         self.reset()
         self.player_id = player_id 
@@ -19,7 +23,7 @@ class Player:
         self._won_game = False
         self._your_turn = False
 
-    def get_selected_piece(self):
+    def get_selected_card(self):
         return self.selected_card
     
     def set_selected_card(self, size):

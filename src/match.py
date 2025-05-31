@@ -1,10 +1,18 @@
 import random
 
+from goal_card import GoalCard
+
+from card import Card
+
+from path_card import PathCard
+
 from player import Player
 
 class Match:
     def __init__(self):
-        self._cards: list[Cards] = None
+        self._deck: list[Card] = None
+        self.reset_deck()
+
         self._local_player = Player()
         self._remote_player1 = Player()
         self._remote_player2 = Player()
@@ -37,6 +45,37 @@ class Match:
         self._adjacencyMatrix = [0]*15
         for i in range(15):
             self._adjacencyMatrix[i] = [0]*27
+
+        self._visMatrix = [0]*15
+        for i in range(15):
+            self._visMatrix[i] = [0]*27
+
+
+    def reset_deck(self):
+        self._deck = []  # Clear the deck before resetting
+        
+        # x1 cards (7 in the image)
+        for i in range(7):
+            self._deck.append(PathCard(i, True, True, True, True, True, True))
+        
+        # x2 cards (3 in the image)
+        for i in range(3):
+            self._deck.append(PathCard(i, True, True, False, False, True, True))
+        
+        # x3 cards (4 in the image - 1 in row 3 and 3 in row 4)
+        for i in range(4):
+            self._deck.append(PathCard(i, True, True, False, True, True, True))
+        
+        # x4 cards (2 in the image - first and fifth in first row)
+        for i in range(2):
+            self._deck.append(PathCard(i, True, True, True, False, False, True))
+        
+        # x5 cards (3 in the image - second, third, and sixth in first row)
+        for i in range(3):
+            self._deck.append(PathCard(i, True, True, True, False, True, True))
+        
+        # x6 cards (1 in the image - second in third row)
+        self._deck.append(PathCard(0, True, False, False, True, True, True))
 
     def get_turn_player(self):
         if self._local_player.get_turn():
@@ -88,11 +127,10 @@ class Match:
         return move
     
     def start_round(self):
-        
+        pass
 
 
     def start_new_hand(self):
-        self.clean_board()
         cards = self.distribuir_cartas()
         random.shuffle(self._cards)
         local_player_cards = cards[0]
@@ -119,7 +157,9 @@ class Match:
         return move
 
     def distribuir_cartas(self):
+        print("distriboi cartas")
         players_cards = []
+
         for i in range(5):
             temp_cards = []
             for j in range(6):
@@ -131,7 +171,9 @@ class Match:
     
     def clean_board(self):
         # melhorar isso aqui
-        self._cartas_jogadas = [[]]
+        self._board = []
+        for i in range(5):
+            self._board.append(9*[None])
 
     def get_status(self):
         game_status = dict()
@@ -210,7 +252,7 @@ class Match:
         """
         turn_player = self.get_turn_player()
         #arrumar essa bomba
-        card = turn_player.selected_card
+        card = turn_player.get_selected_card()
         move_info = {}
         # Verifica se a posição está dentro dos limites do tabuleiro
         if grid_line > 10 or grid_column > 6:
@@ -222,13 +264,13 @@ class Match:
                 # Coloca a carta no tabuleiro
                 self._board[grid_line][grid_column] = card
                 turn_player.remove_card_from_hand(card)
-                self.update_adjacency_matrix(grid_line,grid_column)
+                self.update_adjacency_matrix(grid_line,grid_column,card)
             
             # Verifica se completou um caminho até o ouro
             if self.check_path_to_gold():
                 move_info["game_status"] = "gold_found"
                 self.game_status = "gold_found"
-                self.update_scores()
+                self.update_scores(grid_line,grid_column)
             else:
                 move_info["game_status"] = "next_turn"
                 self.pass_turn_to_next_player()
@@ -243,17 +285,90 @@ class Match:
             
         return move_info
     
+    def check_path_to_gold(self):
+        """Check if there's a valid path from the given position to a gold card using BFS."""
+        line = 2
+        column = 0
+        def in_board(l, c):
+            """Check if coordinates are within board boundaries."""
+            return 0 <= l < 15 and 0 <= c < 27
+        
+        # Directions: north, south, east, west
+        directions = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+        
+        # Initialize visited matrix
+        vis_matrix = [[0 for _ in range(27)] for _ in range(15)]
+        
+        # Convert logical coordinates to board matrix coordinates
+        new_line = 3 * line + 1  # Center of the card
+        new_column = 3 * column + 1
+        
+        queue = [(new_line, new_column)]
+        vis_matrix[new_line][new_column] = 1
+        
+        while queue:
+            current_l, current_c = queue.pop(0)
+            
+            # Check if current position is a gold card
+            if self.is_gold_card(current_l, current_c):
+                return True
+            
+            # Explore all four directions
+            for dl, dc in directions:
+                nl = current_l + dl
+                nc = current_c + dc
+
+                # Check if neighbor is within bounds and not visited
+                if in_board(nl, nc) and vis_matrix[nl][nc] == 0:
+                    # Check if there's a valid path between current cell and neighbor
+                    if (self._adjacencyMatrix[nl][nc] == 1):
+                        vis_matrix[nl][nc] = 1
+                        queue.append((nl, nc))
+        
+        return False
+
+    def is_gold_card(self, l, c):
+        """Check if the given position contains a gold card."""
+        card = self._board[l // 3][c // 3]
+        return isinstance(card, GoalCard) and card.is_gold()
+
+    def update_adjacency_matrix(self,line,colum,card):
+        new_line = 3*line
+        new_colum = 3*colum
+        if (card.get_north()):
+            self._adjacencyMatrix[line+1][colum] = 1
+        if (card.get_south()):
+            self._adjacencyMatrix[line-1][colum] = 1
+        if (card.get_east()):
+            self._adjacencyMatrix[line][colum-1] = 1
+        if (card.get_west()):
+            self._adjacencyMatrix[line][colum+1] = 1
+
     def verify_adjacent_positions(self,line,colum):
-        if(line+1 > 8): 
+        current_card = self._board[line][colum]
+        if(line+1 > 5): 
             north = None
         else:
             north = self._board[line+1][colum]
         if(line-1 < 0):
             south = None
-        south = self._board[line-1][colum]
-        east = self._board[line][colum-1]
-        west = self._board[line][colum+1]
-
+        else:
+            south = self._board[line-1][colum]
+        if colum-1 < 0:
+            east = None
+        else:
+            east = self._board[line][colum-1]
+        if colum+1 > 8:
+            west = None
+        else:
+            west = self._board[line][colum+1]
+        
+        if (north == None or not(north.get_south() ^ current_card.get_north())):
+            if (south == None or not(south.get_north() ^ current_card.get_south())):
+                if (east == None or not(east.get_west() ^ current_card.get_east())):
+                    if (west == None or not(west.get_east() ^ current_card.get_west())):
+                        return True
+        return False
 
     def removeCardFromPosition(self):
         pass
@@ -289,9 +404,6 @@ class Match:
         card = hands_card[position]        
         turn_player.set_selected_card(card)
         self.match_status = 4  #   move occurring (waiting second action)
-        
-    def get_match_status():
-
         
     def hasCardSelected(self) -> bool:
         pass

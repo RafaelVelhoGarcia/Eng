@@ -217,7 +217,7 @@ class PlayerInterface(DogPlayerInterface):
 
             card_img = Image.open(f"../images/cartas/{card_str}.png")
             card_img.thumbnail(
-                (card_img.width // 8, card_img.height // 8)
+                (card_img.width // 8, card_img.height // 8),
                 Image.LANCZOS,
             )
 
