@@ -140,17 +140,15 @@ class PlayerInterface(DogPlayerInterface):
         # Mão do jogador
         self._hand_frame = tk.Frame(bottom_frame, bd=1, relief=tk.GROOVE)
         self._hand_frame.pack(side=tk.LEFT, padx=5)
+        
         tk.Label(self._hand_frame, text="Mão", font=("Arial", 10)).pack()
-        self.hand_slots = []
-        cards_container = tk.Frame(self._hand_frame)
-        cards_container.pack()
-        for i in range(6):
-            slot = tk.Frame(cards_container, width=CARD_WIDTH, height=CARD_HEIGHT,
-                          bd=1, relief=tk.RIDGE, bg="white")
-            slot.pack(side=tk.LEFT, padx=2)
-            slot.pack_propagate(False)
-            slot.bind("<Button-1>", lambda event, idx=i: self.on_hand_click(idx))
-            self.hand_slots.append(slot)
+        
+         # Create the container for hand cards that will use grid
+        self.hand_cards_container = tk.Frame(self._hand_frame)
+        self.hand_cards_container.pack()
+
+        #self.hand_slots = []
+        self.__card_tks = []
         
         # Pilha de Descarte
         discard_frame = tk.Frame(bottom_frame, bd=1, relief=tk.GROOVE)
@@ -193,49 +191,100 @@ class PlayerInterface(DogPlayerInterface):
 
 
 
-    def update_interface(self,game_status: dict):
-        your_turn = game_status["your_turn"]
-        if your_turn:
-            self._ind_turno.set("Seu turno")
+    def update_interface(self, game_status: dict):
+        # Atualiza informações do turno
+        your_turn = game_status.get("your_turn", False)
+        self._ind_turno.set("Seu turno" if your_turn else "Turno do oponente")
+        
+        # Atualiza placar de ouro dos jogadores
+        scores = game_status.get("score", [0, 0, 0, 0, 0])
+        self._gold_local_player.set(f"Você - Ouro: {scores[0]}")
+        self._gold_player1.set(f"Jogador 1 - Ouro: {scores[1]}")
+        self._gold_player2.set(f"Jogador 2 - Ouro: {scores[2]}")
+        self._gold_player3.set(f"Jogador 3 - Ouro: {scores[3]}")
+        self._gold_player4.set(f"Jogador 4 - Ouro: {scores[4]}")
+        
+        # Atualiza time do jogador
+        team = game_status.get("your_team", "Desconhecido")
+        self._your_team.set(f"Seu time: {team}")
+        
+        if hasattr(self, 'hand_cards_container'):
+            for widget in self.hand_cards_container.winfo_children():
+                widget.destroy()
         else:
-            self._ind_turno.set("Turno oponente")
-
-        (points_local_player_points,points_remote_player1,
-         points_remote_player2,points_remote_player3,
-         points_remote_player4) = game_status["score"]
-
-        self._gold_player1.set(f"Player 1 - Ouro: {points_remote_player1}")
-        self._gold_player2.set(f"Player 2 - Ouro: {points_remote_player2}")
-        self._gold_player3.set(f"Player 3 - Ouro: {points_remote_player3}")
-        self._gold_player3.set(f"Player 4 - Ouro: {points_remote_player4}")
-        self._gold_local_player.set(f"{points_local_player_points}")
-
-        local_player_cards = game_status["local_player_cards"]
-        self.__cards_tks = []
-        for col,(card,_) in enumerate(local_player_cards):
-            card_str = card.to_string()
-
-            card_img = Image.open(f"../images/cartas/{card_str}.png")
-            card_img.thumbnail(
-                (card_img.width // 8, card_img.height // 8),
-                Image.LANCZOS,
-            )
-
-            card_tk = ImageTk.PhotoImage(card_img)
-            self.__card_tks.append(card_tk)
-            
-            card_label = ttk.Label(master=self._hand_frame,image = card_tk)
-            card_label.bind(
-                "<Button-1>",
-                lambda _, c=local_player_cards[col]: self.on_hand_click(c),
-            )
-
-        #fazer parte de mudar as cartas :
+            self.hand_cards_container = tk.Frame(self._hand_frame)
+            self.hand_cards_container.pack()
+        
+        # Atualiza cartas na mão do jogador
+        local_player_cards = game_status.get("local_player_cards", [])
+        
+        for col, (card, _) in enumerate(local_player_cards):
+            try:
+                card_str = card.to_string()
+                card_img = Image.open(f"../images/cartas/{card_str}.png")
+                card_img = card_img.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+                
+                card_tk = ImageTk.PhotoImage(card_img)
+                self.__card_tks.append(card_tk)  # Keep reference
+                
+                card_label = ttk.Label(self.hand_cards_container, image=card_tk)
+                card_label.image = card_tk  # Additional reference
+                card_label.grid(row=0, column=col, padx=2)
+                
+                card_label.bind(
+                    "<Button-1>", 
+                    lambda event, c=col: self.on_hand_click(c)
+                )
+            except Exception as e:
+                print(f"Erro ao carregar carta {card_str}: {e}")
+        
+        # Atualiza tabuleiro
+        board_state = game_status.get("board", [])
+        for row in range(5):
+            for col in range(9):
+                # Limpa o slot antes de adicionar nova carta
+                for widget in self.board_slots[row][col].winfo_children():
+                    widget.destroy()
+                
+                # Adiciona carta se existir na posição
+                if row < len(board_state) and col < len(board_state[row]):
+                    card = board_state[row][col]
+                    if card:  # Se há uma carta nesta posição
+                        try:
+                            card_str = card.to_string()
+                            card_img = Image.open(f"../images/cartas/{card_str}.png")
+                            card_img = card_img.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+                            
+                            card_tk = ImageTk.PhotoImage(card_img)
+                            label = ttk.Label(self.board_slots[row][col], image=card_tk)
+                            label.image = card_tk  # Mantém referência
+                            label.pack()
+                        except Exception as e:
+                            print(f"Erro ao carregar carta no tabuleiro {row},{col}: {e}")
+        
+        # Atualiza descarte
+        discard_pile = game_status.get("discard", [])
+        for widget in self.discard_slot.winfo_children():
+            widget.destroy()
+        
+        if discard_pile:
+            try:
+                top_card = discard_pile[-1]
+                card_str = top_card.to_string()
+                card_img = Image.open(f"../images/cartas/{card_str}.png")
+                card_img = card_img.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+                
+                card_tk = ImageTk.PhotoImage(card_img)
+                label = ttk.Label(self.discard_slot, image=card_tk)
+                label.image = card_tk
+                label.pack()
+            except Exception as e:
+                print(f"Erro ao carregar carta no descarte: {e}")
 
     def receive_move(self, a_move):
-        self._match.receive_move()
+        self._match.receive_move(a_move)  # Pass the move to the match
         game_status = self._match.get_status()
-        self.update_interface()
+        self.update_interface(game_status)  # Pass the status to update
 
     def quit(self):
         self._main_window.destroy()
@@ -243,7 +292,9 @@ class PlayerInterface(DogPlayerInterface):
     def on_board_click(self, row, col):
         print(f"Board clicked at row {row}, column {col}")
         match_status = self._match.get_match_status()
-        if match_status == 3 or match_status == 4:
+        print("match:",match_status)
+        if match_status == "in progress":
+            print("cachorro belga")
             move_to_send = self._match.select_board_position(row, col)
             game_state = self._match.get_status()
             self.update_interface(game_state)

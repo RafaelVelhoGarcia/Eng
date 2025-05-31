@@ -110,6 +110,7 @@ class SaboteurGame(DogPlayerInterface, tk.Tk):
     def start_match(self):
         start_status = self.dog_server_interface.start_match(5)
         messagebox.showinfo(message=start_status.get_message())
+        
     def update_interface(self,game_status: dict):
         your_turn = game_status["seu_turno"]
         if your_turn:

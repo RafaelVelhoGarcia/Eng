@@ -1,4 +1,4 @@
-#from card import Card
+from card import Card
 
 class Player:
     def __init__(self):
@@ -44,7 +44,7 @@ class Player:
     def assign_game_win(self):
         self._won_game = True
 
-    def get_cards(self) -> list[tuple]:
+    def get_cards(self) -> list[Card]:
         return self._cards
 
     def receive_cards(self, cards: list):
@@ -52,5 +52,6 @@ class Player:
             map(lambda card: (Card.from_dict(card), self._player_id), cards)
         )
     
+
     def remove_card(self, card: tuple):
         self._cards.remove(card)

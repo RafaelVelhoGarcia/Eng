@@ -13,6 +13,8 @@ class Match:
         self._deck: list[Card] = None
         self.reset_deck()
 
+        self._round = 0
+
         self._local_player = Player()
         self._remote_player1 = Player()
         self._remote_player2 = Player()
@@ -53,7 +55,6 @@ class Match:
 
     def reset_deck(self):
         self._deck = []  # Clear the deck before resetting
-        
         # x1 cards (7 in the image)
         for i in range(7):
             self._deck.append(PathCard(i, True, True, True, True, True, True))
@@ -71,12 +72,14 @@ class Match:
             self._deck.append(PathCard(i, True, True, True, False, False, True))
         
         # x5 cards (3 in the image - second, third, and sixth in first row)
-        for i in range(3):
+        for i in range(30):
             self._deck.append(PathCard(i, True, True, True, False, True, True))
         
         # x6 cards (1 in the image - second in third row)
         self._deck.append(PathCard(0, True, False, False, True, True, True))
-
+        print("Encheu ")
+        print(self._deck)
+        print("._.")
     def get_turn_player(self):
         if self._local_player.get_turn():
             return self._local_player
@@ -131,8 +134,8 @@ class Match:
 
 
     def start_new_hand(self):
+        random.shuffle(self._deck)
         cards = self.distribuir_cartas()
-        random.shuffle(self._cards)
         local_player_cards = cards[0]
         remote_player1_cards = cards[1]
         remote_player2_cards = cards[2]
@@ -158,12 +161,13 @@ class Match:
 
     def distribuir_cartas(self):
         print("distriboi cartas")
+        self.reset_deck()
         players_cards = []
 
         for i in range(5):
             temp_cards = []
             for j in range(6):
-                card = self._cards.pop()
+                card = self._deck.pop()
                 temp_cards.append(card)
             players_cards.append(temp_cards)
 
@@ -174,6 +178,15 @@ class Match:
         self._board = []
         for i in range(5):
             self._board.append(9*[None])
+
+    def verify_end_match(self):
+        if self._round == 3:
+            # acabousse tudo
+            return 1
+        else:
+            # A partida ainda não terminou.
+            return 0
+
 
     def get_status(self):
         game_status = dict()
@@ -243,6 +256,7 @@ class Match:
     def receive_build(self, move:dict):
         carta_jogada, id_jogador = move["BUILD"]
     def select_board_position(self,grid_line,grid_column):
+        print("cheguei no select_board_pos")
         """
         Coloca uma carta no tabuleiro do jogo Saboteur
         :param grid_line: linha do tabuleiro onde a carta será colocada
@@ -252,7 +266,11 @@ class Match:
         """
         turn_player = self.get_turn_player()
         #arrumar essa bomba
-        card = turn_player.get_selected_card()
+        card_tuple = turn_player.get_selected_card()
+
+        if isinstance(card_tuple, tuple):
+            card_only = card_tuple[0]
+
         move_info = {}
         # Verifica se a posição está dentro dos limites do tabuleiro
         if grid_line > 10 or grid_column > 6:
@@ -261,10 +279,11 @@ class Match:
         else:
             # Verifica se a posição está adjacente a cartas já colocadas (exceto para a primeira jogada)
             if self.verify_adjacent_positions(grid_line, grid_column):
+                print("passou pelo verify adjacente position")
                 # Coloca a carta no tabuleiro
-                self._board[grid_line][grid_column] = card
-                turn_player.remove_card_from_hand(card)
-                self.update_adjacency_matrix(grid_line,grid_column,card)
+                self._board[grid_line][grid_column] = card_only
+                turn_player.remove_card_from_hand(card_tuple)
+                self.update_adjacency_matrix(grid_line,grid_column,card_only)
             
             # Verifica se completou um caminho até o ouro
             if self.check_path_to_gold():
@@ -272,19 +291,26 @@ class Match:
                 self.game_status = "gold_found"
                 self.update_scores(grid_line,grid_column)
             else:
+                print("não achou ouro segue o bAILE")
+
                 move_info["game_status"] = "next_turn"
+                print("proximo metodo nem existe")
                 self.pass_turn_to_next_player()
                 self.game_status = "waiting_card_selection"
             
             # Prepara informações da jogada para enviar aos outros jogadores
-            move_info["player"] = turn_player.id
-            move_info["card_type"] = card.card_type
-            move_info["card_direction"] = card.direction if hasattr(card, 'direction') else None
+            move_info["player"] = turn_player.get_player_id()
+            move_info["card_type"] = card_tuple.card_type
+            move_info["card_direction"] = card_tuple.direction if hasattr(card_tuple, 'direction') else None
             move_info["position_line"] = grid_line
             move_info["position_column"] = grid_column
             
         return move_info
     
+    def pass_turn_to_next_player():
+        
+
+
     def check_path_to_gold(self):
         """Check if there's a valid path from the given position to a gold card using BFS."""
         line = 2
@@ -335,13 +361,13 @@ class Match:
     def update_adjacency_matrix(self,line,colum,card):
         new_line = 3*line
         new_colum = 3*colum
-        if (card.get_north()):
+        if (self._board[line][colum].get_north()):
             self._adjacencyMatrix[line+1][colum] = 1
-        if (card.get_south()):
+        if (self._board[line][colum].get_south()):
             self._adjacencyMatrix[line-1][colum] = 1
-        if (card.get_east()):
+        if (self._board[line][colum].get_east()):
             self._adjacencyMatrix[line][colum-1] = 1
-        if (card.get_west()):
+        if (self._board[line][colum].get_west()):
             self._adjacencyMatrix[line][colum+1] = 1
 
     def verify_adjacent_positions(self,line,colum):
@@ -400,10 +426,12 @@ class Match:
     def select_card(self, position: int):
         turn_player = self.get_turn_player()
         self.regular_move = True
-        hands_card = turn_player.get_cards
+        hands_card = turn_player.get_cards()
         card = hands_card[position]        
         turn_player.set_selected_card(card)
         self.match_status = 4  #   move occurring (waiting second action)
+        print("Fez tudo em select card")
+        print(turn_player.get_cards())
         
     def hasCardSelected(self) -> bool:
         pass
